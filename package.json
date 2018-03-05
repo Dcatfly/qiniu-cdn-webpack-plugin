@@ -1,0 +1,29 @@
+{
+  "name": "webpack-qiniu-plugin",
+  "version": "1.0.0",
+  "description": "Webpack plugin for QiNiu CDN",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dcatfly/webpack-qiniu-plugin.git"
+  },
+  "keywords": [
+    "webpack",
+    "qiniu",
+    "cdn",
+    "upload"
+  ],
+  "author": "dcatlfy",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Dcatfly/webpack-qiniu-plugin/issues"
+  },
+  "homepage": "https://github.com/Dcatfly/webpack-qiniu-plugin#readme",
+  "dependencies": {
+    "ora": "^2.0.0",
+    "qiniu": "^7.1.3"
+  }
+}
