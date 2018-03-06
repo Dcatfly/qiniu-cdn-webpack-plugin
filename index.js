@@ -1,13 +1,15 @@
 const qiniu = require('qiniu')
 const ora = require('ora');
 const chunk = require('lodash.chunk')
-const path = require('path')
 
 //七牛配置初始化
 const config = new qiniu.conf.Config();
+qiniu.conf.RPC_TIMEOUT = 600000;
 
-//七牛刷新cdn每次最大的数目
-const MAX_REFRESH_CDN = 100
+
+//七牛单次刷新cdn、单次删除文件 最大的数目
+const MAX_SINGLE_REFRESH = 100;
+const MAX_SINGLE_DELETE = 1000;
 
 // 上传进度
 const spinner = ora({
@@ -29,6 +31,11 @@ const tip = ({done = 0, total, type = 'uploading'}) => {
 
 };
 
+//utils cdn拼接 处理cdn后面的/
+const _join = (cdn, path) => {
+  return cdn.substr(-1) === '/' ? cdn + path : `${cdn}/${path}`
+}
+
 
 
 //上传完成
@@ -49,22 +56,84 @@ const refresh = (fileNames, mac, cdn) => {
         refreshed += urls.length;
         tip({done: refreshed, total, type})
         if (err) {
-          console.log(respBody)
           reject(err)
         }
         if (respInfo.statusCode == 200) {
           resolve()
         }else {
-          console.log(respInfo)
           reject(respBody)
         }
       });
     })
   }
   //每次只能包含100个cdn链接
-  return Promise.all(chunk(fileNames, MAX_REFRESH_CDN).
-      map(chunkFiles => _refresh(chunkFiles.map(name => path.join(cdn, name))))
+  return Promise.all(chunk(fileNames, MAX_SINGLE_REFRESH).
+      map(chunkFiles => _refresh(chunkFiles.map(name => _join(cdn, name))))
   )
+
+}
+
+//删除指定bucket内所有资源
+const deleteFiles = (bucket, mac) => {
+  const bucketManager = new qiniu.rs.BucketManager(mac, config);
+  let deleted = 0, total = 0, type = 'deleting';
+  const getAllFiles = (marker, preItems = []) => {
+    // @param options 列举操作的可选参数
+    //                prefix    列举的文件前缀
+    //                marker    上一次列举返回的位置标记，作为本次列举的起点信息
+    //            limit     每次返回的最大列举文件数量
+    //            delimiter 指定目录分隔符
+    let opt = {prefix: ''};
+    marker && (opt.marker = marker);
+    return new Promise((resolve, reject) => {
+      bucketManager.listPrefix(bucket, opt, function (err, respBody, respInfo) {
+        if (err) {
+          reject(err)
+        }
+
+        if (respInfo.statusCode == 200) {
+          //如果这个nextMarker不为空，那么还有未列举完毕的文件列表，下次调用listPrefix的时候，
+          //指定options里面的marker为这个值
+          let nextMarker = respBody.marker;
+          if (nextMarker) {
+            return getAllFiles(nextMarker, preItems.concat(respBody.items))
+          } else {
+            resolve(preItems.concat(respBody.items))
+          }
+
+        } else {
+          reject(respBody)
+        }
+      });
+
+    })
+  }
+
+  const _deleteChunkFiles = (files) => {
+    return new Promise((resolve, reject) => {
+      bucketManager.batch(files, function (err, respBody, respInfo) {
+        deleted += files.length;
+        tip({done: deleted, total, type})
+        if (err) {
+          reject(err);
+        } else {
+          // 200 is success, 298 is part success
+          if (parseInt(respInfo.statusCode / 100) == 2) {
+            resolve()
+          } else {
+            reject(respBody);
+          }
+        }
+      });
+    })
+  }
+
+  return getAllFiles().then((files) => {
+    total = files.length;
+    tip({total, type})
+    return Promise.all(chunk(files, MAX_SINGLE_DELETE).
+        map(chunkFiles => _deleteChunkFiles(chunkFiles.map(file => qiniu.rs.deleteOp(bucket, file.key)))))
+  })
 
 }
 
@@ -75,13 +144,16 @@ module.exports = class QiniuPlugin {
     if(!options || !options.accessKey || !options.secretKey){
       throw new Error(`accessKey and secretKey must be provided`)
     }
+    const {zone} = options;
+    config.zone = qiniu.zone[zone] || qiniu.zone.Zone_z1;
+
     this.options = {...options}
   }
 
   apply(compiler) {
     compiler.plugin('after-emit', (compilation, callback) => {
       const {assets} = compilation;
-      const {bucket, zone, accessKey, secretKey, chunkSize = 20, exclude, clear, refreshCDN} = this.options;
+      const {bucket, accessKey, secretKey, chunkSize = 20, exclude, clean, refreshCDN} = this.options;
 
       const fileNames = Object.keys(assets).filter((fileName) => {
         const file = assets[fileName] || {};
@@ -90,8 +162,6 @@ module.exports = class QiniuPlugin {
       })
       let total = fileNames.length, uploaded = 0;
 
-      config.zone = qiniu.zone[zone] || qiniu.zone.Zone_z1;
-      qiniu.conf.RPC_TIMEOUT = 600000;
 
       //打印上传状态
       tip({})
@@ -119,8 +189,6 @@ module.exports = class QiniuPlugin {
               // console.log(ret.hash, ret.key, ret.persistentId);
               resolve()
             } else {
-              console.log(respInfo.statusCode);
-              console.log(respBody);
               reject(respBody)
             }
 
@@ -141,12 +209,18 @@ module.exports = class QiniuPlugin {
         }
       }
 
-      uploadChunk().then(() => {
+      Promise.resolve().then(() => {
+        const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
+        return clean && deleteFiles(bucket, mac)
+      }).then(() => {
+        return uploadChunk()
+      }).then(() => {
         const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
         return refreshCDN && refresh(fileNames, mac, refreshCDN)
       }).then(() => {
         finish({callback})
       }).catch((err) => {
+        console.log(err)
         finish({callback, err})
       })
 
