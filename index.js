@@ -59,7 +59,12 @@ const refresh = (fileNames, mac, cdn) => {
           reject(err)
         }
         if (respInfo.statusCode == 200) {
-          resolve()
+          //qiniu的工程师厉害了。。。
+          respBody = JSON.parse(respBody)
+          if(respBody.code === 200 || respBody.error === 'success'){
+            resolve()
+          }
+          reject({message: `refresh error`, respBody})
         }else {
           reject(respBody)
         }
