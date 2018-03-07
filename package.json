@@ -1,6 +1,6 @@
 {
   "name": "qiniu-cdn-webpack-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Webpack plugin for delete & upload & refresh to QiNiu CDN",
   "main": "index.js",
   "scripts": {
@@ -27,7 +27,7 @@
   "homepage": "https://github.com/Dcatfly/qiniu-cdn-webpack-plugin#readme",
   "dependencies": {
     "lodash.chunk": "^4.2.0",
-    "lodash.isfunction": "^4.2.0",
+    "lodash.isfunction": "^3.0.9",
     "ora": "^2.0.0",
     "qiniu": "^7.1.3"
   }
