@@ -1,17 +1,18 @@
 {
-  "name": "qncdn-webpack-plugin",
+  "name": "qiniu-cdn-webpack-plugin",
   "version": "1.0.0",
-  "description": "Webpack plugin for QiNiu CDN",
+  "description": "Webpack plugin for delete & upload & refresh to QiNiu CDN",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Dcatfly/qncdn-webpack-plugin.git"
+    "url": "git+https://github.com/Dcatfly/qiniu-cdn-webpack-plugin.git"
   },
   "keywords": [
     "webpack",
+    "plugin",
     "qiniu",
     "cdn",
     "upload",
@@ -21,9 +22,9 @@
   "author": "dcatlfy",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Dcatfly/qncdn-webpack-plugin/issues"
+    "url": "https://github.com/Dcatfly/qiniu-cdn-webpack-plugin/issues"
   },
-  "homepage": "https://github.com/Dcatfly/qncdn-webpack-plugin#readme",
+  "homepage": "https://github.com/Dcatfly/qiniu-cdn-webpack-plugin#readme",
   "dependencies": {
     "lodash.chunk": "^4.2.0",
     "lodash.isfunction": "^4.2.0",

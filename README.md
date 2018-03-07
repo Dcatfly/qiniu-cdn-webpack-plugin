@@ -1,4 +1,4 @@
-# qncdn-webpack-plugin
+# qiniu-cdn-webpack-plugin
 > 将webpack编译之后的文件上传到七牛云，支持上传前删除bucket中的旧文件，上传之后刷新cdn。
 
 ## 特性
@@ -10,16 +10,16 @@
 
 ## 安装
 ```shell
-npm install --save-dev qncdn-webpack-plugin
+npm install --save-dev qiniu-cdn-webpack-plugin
 ```
 ```shell
-yarn add --dev qncdn-webpack-plugin
+yarn add --dev qiniu-cdn-webpack-plugin
 ```
 
 ## 使用方法
 ```js
 //webpack config
-const Qiniu = require('qncdn-webpack-plugin')
+const Qiniu = require('qiniu-cdn-webpack-plugin')
 
 const CDN_HOST = `https://static.qiniuxxx.com/`
 module.exports = {
