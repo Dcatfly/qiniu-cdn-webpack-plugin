@@ -1,6 +1,7 @@
 const qiniu = require('qiniu')
 const ora = require('ora');
 const chunk = require('lodash.chunk')
+const isFunction = require('lodash.isfunction')
 
 //七牛配置初始化
 const config = new qiniu.conf.Config();
@@ -46,7 +47,6 @@ const finish = ({err, callback}) => {
 
 //刷新CDN 限额500每天
 const refresh = (fileNames, mac, cdn) => {
-  //@TODO 增加处理函数 可以指定刷新符合处理函数规则的file
   const cdnManager = new qiniu.cdn.CdnManager(mac);
   let total = fileNames.length, refreshed = 0, type = 'refreshing';
   tip({type})
@@ -153,18 +153,19 @@ module.exports = class QiniuPlugin {
   apply(compiler) {
     compiler.plugin('after-emit', (compilation, callback) => {
       const {assets} = compilation;
-      const {bucket, accessKey, secretKey, chunkSize = 20, exclude, clean, refreshCDN} = this.options;
-
+      const {bucket, accessKey, secretKey, chunkSize = 20, exclude, clean, refreshCDN, refreshFilter} = this.options;
       const fileNames = Object.keys(assets).filter((fileName) => {
         const file = assets[fileName] || {};
         if (!file.emitted || new RegExp(exclude).test(fileName)) return false;
         return true
       })
-      let total = fileNames.length, uploaded = 0;
+      let total = fileNames.length, uploaded = 0, refreshFilterFunc = refreshFilter;
+
+      refreshFilterFunc && !isFunction(refreshFilterFunc) && (refreshFilterFunc = (name) => {
+        return new RegExp(refreshFilter).test(name)
+      })
 
 
-      //打印上传状态
-      tip({})
 
       //构建上传单个文件函数
       const upload = (fileName) => {
@@ -213,10 +214,12 @@ module.exports = class QiniuPlugin {
         const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
         return clean && deleteFiles(bucket, mac)
       }).then(() => {
+        //打印上传状态
+        tip({})
         return uploadChunk()
       }).then(() => {
         const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
-        return refreshCDN && refresh(fileNames, mac, refreshCDN)
+        return refreshCDN && refresh(fileNames.filter(refreshFilterFunc), mac, refreshCDN)
       }).then(() => {
         finish({callback})
       }).catch((err) => {

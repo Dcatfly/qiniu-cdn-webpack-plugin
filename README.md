@@ -1,5 +1,5 @@
-# webpack-qiniu-plugin
-> 将webpack编译之后的文件上传到七牛云
+# qncdn-webpack-plugin
+> 将webpack编译之后的文件上传到七牛云，支持上传前删除bucket中的旧文件，上传之后刷新cdn。
 
 ## 特性
 - [x] 支持上传到七牛云指定`bucket`
@@ -9,11 +9,17 @@
 - [x] 支持上传完成后刷新cdn
 
 ## 安装
+```shell
+npm install --save-dev qncdn-webpack-plugin
+```
+```shell
+yarn add --dev qncdn-webpack-plugin
+```
 
 ## 使用方法
 ```js
 //webpack config
-const Qiniu = require('webpack-qiniu-plugin')
+const Qiniu = require('qncdn-webpack-plugin')
 
 const CDN_HOST = `https://static.qiniuxxx.com/`
 module.exports = {
@@ -32,6 +38,7 @@ module.exports = {
         zone: 'Zone_z0',
         exclude: /\.html/,
         refreshCDN: CDN_HOST,
+        refreshFilter: /(a.js)|(b.js)/
         clean: true
     })
   ]
@@ -45,8 +52,9 @@ module.exports = {
 |**[`bucket`](#)**|`{Sring}`||七牛云存储中的`bucket`|
 |**[`zone`](#)**|`{Sring}`|`Zone_z1`|七牛云存储位置，华东 `Zone_z0`、华北 `Zone_z1`、华南 `Zone_z2`、北美 `Zone_na0`|
 |**[`chunkSize`](#)**|`{Number}`|`20`|每次并行上传的文件个数|
-|**[`exclude`](#)**|`{Regexp}`||要排除的文件名正则规则|
+|**[`exclude`](#)**|`{RegExp}`||要排除的文件名正则规则|
 |**[`refreshCDN`](#)**|`{Sring}`||想要刷新cdn的域名，不填写默认不刷新cdn，填写默认上传完成后刷新此次上传的所有文件|
+|**[`refreshFilter`](#)**|`{RegExp | Function}`||七牛限额每天只能刷新500个文件，通过这个参数可以过滤出想要刷新的文件。|
 |**[`clean`](#)**|`{Boolean}`|false|上传之前删除七牛云存储`bucket`中的所有文件，防止每次文件名称变动`hash`，产生多余垃圾。|
 
 ## License
