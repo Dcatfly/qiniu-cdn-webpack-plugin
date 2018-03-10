@@ -21,7 +21,7 @@ const tip = ({done = 0, total, type = 'uploading'}) => {
     let percentage = Math.round(done / total * 100);
     spinner.text = `Qiniu CDN ${type}: ${percentage}% ${done}/${total} `;
   }else{
-    spinner.text = 'wait for webpack compiler...'
+    spinner.text = `wait for ${type}...`
   }
 
   if (done === 0){
@@ -159,17 +159,24 @@ module.exports = class QiniuPlugin {
   apply(compiler) {
     compiler.plugin('after-emit', (compilation, callback) => {
       const {assets} = compilation;
-      const {bucket, accessKey, secretKey, chunkSize = 20, exclude, clean, refreshCDN, refreshFilter} = this.options;
+      const {bucket, accessKey, secretKey, chunkSize = 20, exclude, clean, refreshCDN, cleanExclude = () => false, refreshFilter = () => true } = this.options;
+
       const fileNames = Object.keys(assets).filter((fileName) => {
         const file = assets[fileName] || {};
         if (!file.emitted || new RegExp(exclude).test(fileName)) return false;
         return true
       })
-      let total = fileNames.length, uploaded = 0, refreshFilterFunc = refreshFilter;
 
-      refreshFilterFunc && !isFunction(refreshFilterFunc) && (refreshFilterFunc = (name) => {
+      const refreshFilterFunc = !isFunction(refreshFilter) ? (name) => {
         return new RegExp(refreshFilter).test(name)
-      })
+      } : refreshFilter
+
+      const cleanExcludeFunc = !isFunction(cleanExclude) ? (name) => {
+        return new RegExp(cleanExclude).test(name)
+      } : cleanExclude
+
+      let total = fileNames.length, uploaded = 0;
+
 
 
 
@@ -220,7 +227,7 @@ module.exports = class QiniuPlugin {
       tip({})
       uploadChunk().then(() => {
         const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
-        return clean && deleteFiles(bucket, mac, (fileName) => !fileNames.includes(fileName))
+        return clean && deleteFiles(bucket, mac, (fileName) => !fileNames.includes(fileName) && !cleanExcludeFunc(fileName))
       }).then(() => {
         const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
         return refreshCDN && refresh(fileNames.filter(refreshFilterFunc), mac, refreshCDN)
