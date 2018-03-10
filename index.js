@@ -12,7 +12,7 @@ qiniu.conf.RPC_TIMEOUT = 600000;
 const MAX_SINGLE_REFRESH = 100;
 const MAX_SINGLE_DELETE = 1000;
 
-// 上传进度
+//处理进度
 const spinner = ora({
   color: 'green'
 });
@@ -32,14 +32,14 @@ const tip = ({done = 0, total, type = 'uploading'}) => {
 
 };
 
-//utils cdn拼接 处理cdn后面的/
+//utils cdn拼接 处理cdn后面的'/'
 const _join = (cdn, path) => {
   return cdn.substr(-1) === '/' ? cdn + path : `${cdn}/${path}`
 }
 
 
 
-//上传完成
+//上传&删除&刷新完成
 const finish = ({err, callback}) => {
   err && spinner.fail()
   callback && callback(err)
@@ -78,8 +78,8 @@ const refresh = (fileNames, mac, cdn) => {
 
 }
 
-//删除指定bucket内所有资源
-const deleteFiles = (bucket, mac) => {
+//删除指定bucket内的指定资源
+const deleteFiles = (bucket, mac, filter = () => true) => {
   const bucketManager = new qiniu.rs.BucketManager(mac, config);
   let deleted = 0, total = 0, type = 'deleting';
   const getAllFiles = (marker, preItems = []) => {
@@ -134,6 +134,7 @@ const deleteFiles = (bucket, mac) => {
   }
 
   return getAllFiles().then((files) => {
+    files = files.filter((file) => filter(file.key))
     total = files.length;
     tip({total, type})
     return Promise.all(chunk(files, MAX_SINGLE_DELETE).
@@ -215,13 +216,11 @@ module.exports = class QiniuPlugin {
         }
       }
 
-      Promise.resolve().then(() => {
+      //打印上传状态 开始上传
+      tip({})
+      uploadChunk().then(() => {
         const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
-        return clean && deleteFiles(bucket, mac)
-      }).then(() => {
-        //打印上传状态
-        tip({})
-        return uploadChunk()
+        return clean && deleteFiles(bucket, mac, (fileName) => !fileNames.includes(fileName))
       }).then(() => {
         const mac = new qiniu.auth.digest.Mac(accessKey, secretKey);
         return refreshCDN && refresh(fileNames.filter(refreshFilterFunc), mac, refreshCDN)

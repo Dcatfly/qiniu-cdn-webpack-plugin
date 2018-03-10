@@ -55,7 +55,7 @@ module.exports = {
 |**[`exclude`](#)**|`{RegExp}`||要排除的文件名正则规则|
 |**[`refreshCDN`](#)**|`{Sring}`||想要刷新cdn的域名，不填写默认不刷新cdn，填写默认上传完成后刷新此次上传的所有文件|
 |**[`refreshFilter`](#)**|`{RegExp | Function}`||七牛限额每天只能刷新500个文件，通过这个参数可以过滤出想要刷新的文件。|
-|**[`clean`](#)**|`{Boolean}`|false|上传之前删除七牛云存储`bucket`中的所有文件，防止每次文件名称变动`hash`，产生多余垃圾。|
+|**[`clean`](#)**|`{Boolean}`|false|上传之后，删除七牛云存储`bucket`中的除了本次上传之外的所以文件，防止每次文件名称变动`hash`，产生多余垃圾文件。|
 
 ## License
 
