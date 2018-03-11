@@ -17,6 +17,9 @@ yarn add --dev qiniu-cdn-webpack-plugin
 ```
 
 ## 使用方法
+
+**本插件最低支持node@6.x 建议使用最新LTS版本 可以使用[n](https://github.com/tj/n)管理node版本**
+
 ```js
 //webpack config
 const Qiniu = require('qiniu-cdn-webpack-plugin')
